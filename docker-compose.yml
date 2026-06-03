@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sgb3y-postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: paulo_admin
+      POSTGRES_PASSWORD: uan_senha_123
+      POSTGRES_DB: gestao_biometria_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
