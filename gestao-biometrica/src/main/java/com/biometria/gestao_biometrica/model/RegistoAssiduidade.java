@@ -24,6 +24,17 @@ public class RegistoAssiduidade {
     @Column(name = "dispositivo_origem", length = 50)
     private String dispositivoOrigem;
 
+    // --- CONSTRUTORES OBRIGATÓRIOS PARA O HIBERNATE ---
+    public RegistoAssiduidade() {
+    }
+
+    public RegistoAssiduidade(Long id, Utilizador utilizador, String tipoMovimento, String dispositivoOrigem) {
+        this.id = id;
+        this.utilizador = utilizador;
+        this.tipoMovimento = tipoMovimento;
+        this.dispositivoOrigem = dispositivoOrigem;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.dataHora = LocalDateTime.now();

@@ -1,10 +1,18 @@
 package com.biometria.gestao_biometrica.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "biometrias")
+@Getter 
+@Setter 
+@NoArgsConstructor 
+@AllArgsConstructor 
 public class Biometria {
 
     @Id
@@ -34,17 +42,4 @@ public class Biometria {
     protected void onUpdate() {
         this.dataAtualizacao = LocalDateTime.now();
     }
-
-    // --- GETTERS E SETTERS ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public Utilizador getUtilizador() { return utilizador; }
-    public void setUtilizador(Utilizador utilizador) { this.utilizador = utilizador; }
-
-    public Integer getSensorTemplateId() { return sensorTemplateId; }
-    public void setSensorTemplateId(Integer sensorTemplateId) { this.sensorTemplateId = sensorTemplateId; }
-
-    public LocalDateTime getDataRegisto() { return dataRegisto; }
-    public LocalDateTime getDataAtualizacao() { return dataAtualizacao; }
 }
