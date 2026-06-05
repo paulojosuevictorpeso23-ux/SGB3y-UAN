@@ -22,8 +22,11 @@ public class Utilizador {
     @Column(nullable = false, length = 150)
     private String nome;
 
-    @Column(name = "identificacao_escolar", nullable = false, unique = true, length = 20)
-    private String identificacaoEscolar;
+    @Column(nullable = false, unique = true, length = 50)
+    private String username;
+
+    @Column(name = "palavra_passe", nullable = false)
+    private String palavraPasse;
 
     @Column(nullable = false, length = 50)
     private String cargo;

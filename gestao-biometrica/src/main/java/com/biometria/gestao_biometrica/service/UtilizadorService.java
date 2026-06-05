@@ -16,6 +16,9 @@ public class UtilizadorService {
 
     // Lógica para Criar ou Atualizar (Save)
     public Utilizador salvar(Utilizador utilizador) {
+        if (utilizador.getPalavraPasse() == null || utilizador.getPalavraPasse().isBlank()) {
+            utilizador.setPalavraPasse("123456");
+        }
         return utilizadorRepository.save(utilizador);
     }
 
@@ -29,9 +32,9 @@ public class UtilizadorService {
         return utilizadorRepository.findById(id);
     }
 
-    // Lógica para Procurar pelo número da UAN (Read)
-    public Optional<Utilizador> buscarPorIdentificacao(String identificacao) {
-        return utilizadorRepository.findByIdentificacaoEscolar(identificacao);
+    // Lógica para Procurar pelo username (Read) - CORRIGIDO
+    public Optional<Utilizador> buscarPorUsername(String username) {
+        return utilizadorRepository.findByUsername(username);
     }
 
     // Lógica para Apagar (Delete)

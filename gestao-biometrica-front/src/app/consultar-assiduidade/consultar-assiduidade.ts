@@ -13,6 +13,12 @@ import { CommonModule } from '@angular/common';
         <div>🌐 Recebidos do Spring Boot: <b style="color: #2e7d32; font-size: 14px;">{{ todosOsPontos.length }} registos</b></div>
         <div>📊 Exibidos na Tabela: <b>{{ pontosFiltrados.length }} registos</b></div>
       </div>
+      
+      @if (erroDeConexao) {
+        <div style="margin-top: 10px; padding: 10px; background-color: #fce8e6; color: #c5221f; border-radius: 4px; font-weight: bold; border: 1px solid #f8b7b5;">
+          ❌ FALHA NA REQUISIÇÃO: {{ erroDeConexao }}
+        </div>
+      }
     </div>
 
     <div style="background: white; border: 1px solid #eee; border-radius: 8px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); font-family: sans-serif;">
@@ -30,7 +36,7 @@ import { CommonModule } from '@angular/common';
         @if (usuarioLogado?.cargo === 'ADMIN') {
           <div style="display: flex; gap: 10px; align-items: center;">
             <input (input)="filtrarPorTexto($any($event.target).value)"
-                   type="text" placeholder="🔍 Pesquise por nome ou 'entrada'/'saida'..." 
+                   type="text" placeholder="🔍 Pesquise por nome..." 
                    style="padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; width: 300px; font-size: 13px; outline: none;">
             
             <button (click)="carregarTodosOsPontos()" 
@@ -66,7 +72,7 @@ import { CommonModule } from '@angular/common';
                 <td style="padding: 14px; font-weight: bold; color: #666;">#{{ ponto.id }}</td>
                 
                 @if (usuarioLogado?.cargo === 'ADMIN') {
-                  <td style="padding: 14px; color: #999; font-family: monospace;">{{ ponto.utilizador?.id || ponto.utilizadorId }}</td>
+                  <td style="padding: 14px; color: #999; font-family: monospace;">{{ ponto.utilizador?.id }}</td>
                   <td style="padding: 14px; font-weight: 500; color: #111;">{{ ponto.utilizador?.nome || 'Utilizador Desconhecido' }}</td>
                   <td style="padding: 14px;">
                     <span style="background-color: #e8f0fe; color: #1a73e8; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">
@@ -76,7 +82,7 @@ import { CommonModule } from '@angular/common';
                 }
 
                 <td style="padding: 14px;">
-                  @if ((ponto.tipo || ponto.type || '') === 'ENTRADA') {
+                  @if (ponto.tipoMovimento === 'ENTRADA') {
                     <span style="background-color: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">
                       🟢 ENTRADA
                     </span>
@@ -87,7 +93,7 @@ import { CommonModule } from '@angular/common';
                   }
                 </td>
                 <td style="padding: 14px; font-weight: bold; color: #444; font-family: monospace;">
-                  {{ (ponto.dataHora || ponto.dataHoraRegisto) | date: 'dd/MM/yyyy - HH:mm:ss' }}
+                  {{ ponto.dataHora | date: 'dd/MM/yyyy - HH:mm:ss' }}
                 </td>
               </tr>
             } @empty {
@@ -107,8 +113,6 @@ import { CommonModule } from '@angular/common';
 })
 export class ConsultarAssiduidadeComponent implements OnInit, OnChanges {
   private http = inject(HttpClient);
-  
-  // CORRIGIDO AQUI: Apontando exatamente para a rota mapeada no teu Java Controller!
   private urlPontos = 'http://localhost:8080/api/assiduidade';
 
   @Input() usuarioLogado: any = null;
@@ -116,6 +120,7 @@ export class ConsultarAssiduidadeComponent implements OnInit, OnChanges {
   todosOsPontos: any[] = [];
   pontosFiltrados: any[] = [];
   textoDaBusca: string = '';
+  erroDeConexao: string = ''; // Armazena a mensagem de erro caso falte rede/CORS
 
   ngOnInit() {
     this.carregarTodosOsPontos();
@@ -130,12 +135,15 @@ export class ConsultarAssiduidadeComponent implements OnInit, OnChanges {
   carregarTodosOsPontos() {
     this.http.get<any[]>(this.urlPontos).subscribe({
       next: (dados) => {
-        console.log('Dados recebidos com sucesso da rota assiduidade:', dados);
+        console.log('Dados recebidos no Angular:', dados);
         this.todosOsPontos = dados || [];
+        this.erroDeConexao = ''; // Limpa o erro se funcionou
         this.aplicarFiltro();
       },
       error: (erro) => {
-        console.error('Erro crítico ao conectar à rota /api/assiduidade:', erro);
+        console.error('Erro ao conectar à API:', erro);
+        // Captura o erro detalhado para sabermos o motivo
+        this.erroDeConexao = `${erro.message} | Status: ${erro.status} (${erro.statusText})`;
       }
     });
   }
@@ -152,14 +160,15 @@ export class ConsultarAssiduidadeComponent implements OnInit, OnChanges {
       return;
     }
 
+    // 1. SE FOR ESTUDANTE: Filtra rigorosamente pelo ID do utilizador logado
     if (user.cargo === 'ESTUDANTE') {
       this.pontosFiltrados = this.todosOsPontos.filter(ponto => {
-        const idDoUserNoPonto = ponto.utilizador?.id || ponto.utilizadorId || ponto.idUtilizador;
-        return String(idDoUserNoPonto) === String(user.id);
+        return String(ponto.utilizador?.id) === String(user.id);
       });
       return;
     }
 
+    // 2. SE FOR ADMIN: Mostra tudo ou filtra pelo nome pesquisado
     const busca = this.textoDaBusca.toLowerCase().trim();
     if (!busca) {
       this.pontosFiltrados = this.todosOsPontos;
@@ -168,8 +177,7 @@ export class ConsultarAssiduidadeComponent implements OnInit, OnChanges {
 
     this.pontosFiltrados = this.todosOsPontos.filter(ponto => {
       const nome = (ponto.utilizador?.nome || '').toLowerCase();
-      const tipo = (ponto.tipo || ponto.type || '').toLowerCase();
-      return nome.includes(busca) || tipo.includes(busca);
+      return nome.includes(busca);
     });
   }
 }

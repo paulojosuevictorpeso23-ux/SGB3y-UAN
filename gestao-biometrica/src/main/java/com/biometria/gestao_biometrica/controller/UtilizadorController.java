@@ -1,61 +1,72 @@
 package com.biometria.gestao_biometrica.controller;
 
 import com.biometria.gestao_biometrica.model.Utilizador;
-import com.biometria.gestao_biometrica.service.UtilizadorService;
+import com.biometria.gestao_biometrica.repository.UtilizadorRepository;
+import com.biometria.gestao_biometrica.dto.LoginRequest;
+import com.biometria.gestao_biometrica.dto.AlterarSenhaRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/utilizadores")
-@CrossOrigin(origins = "*") // Permite que o Angular se ligue à API sem bloqueios de segurança
+@CrossOrigin(origins = "http://localhost:4200")
 public class UtilizadorController {
 
     @Autowired
-    private UtilizadorService utilizadorService;
+    private UtilizadorRepository repository;
 
-    // 1. CREATE (Criar Utilizador) -> POST http://localhost:8080/api/utilizadores
-    @PostMapping
-    public ResponseEntity<Utilizador> criar(@RequestBody Utilizador utilizador) {
-        Utilizador novoUtilizador = utilizadorService.salvar(utilizador);
-        return ResponseEntity.ok(novoUtilizador);
-    }
-
-    // 2. READ (Listar Todos) -> GET http://localhost:8080/api/utilizadores
     @GetMapping
-    public List<Utilizador> listar() {
-        return utilizadorService.listarTodos();
+    public List<Utilizador> listarTodos() {
+        return repository.findAll();
     }
 
-    // 2. READ (Buscar por ID) -> GET http://localhost:8080/api/utilizadores/{id}
-    @GetMapping("/{id}")
-    public ResponseEntity<Utilizador> buscarPorId(@PathVariable Long id) {
-        return utilizadorService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @PostMapping
+    public Utilizador criar(@RequestBody Utilizador utilizador) {
+        if (utilizador.getPalavraPasse() == null || utilizador.getPalavraPasse().isBlank()) {
+            utilizador.setPalavraPasse("123456");
+        }
+        return repository.save(utilizador);
     }
 
-    // 3. UPDATE (Atualizar Utilizador) -> PUT http://localhost:8080/api/utilizadores/{id}
-    @PutMapping("/{id}")
-    public ResponseEntity<Utilizador> atualizar(@PathVariable Long id, @RequestBody Utilizador dadosAtualizados) {
-        return utilizadorService.buscarPorId(id).map(utilizador -> {
-            utilizador.setNome(dadosAtualizados.getNome());
-            utilizador.setIdentificacaoEscolar(dadosAtualizados.getIdentificacaoEscolar());
-            utilizador.setCargo(dadosAtualizados.getCargo());
-            utilizador.setEstado(dadosAtualizados.getEstado());
-            Utilizador atualizado = utilizadorService.salvar(utilizador);
-            return ResponseEntity.ok(atualizado);
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        Optional<Utilizador> userOpt = repository.findByUsername(request.getUsername());
+
+        if (userOpt.isPresent() && userOpt.get().getPalavraPasse().equals(request.getPalavraPasse())) {
+            Utilizador user = userOpt.get();
+            if ("INATIVO".equals(user.getEstado())) {
+                return ResponseEntity.status(403).body("Utilizador desativado pelo administrador.");
+            }
+            return ResponseEntity.ok(user);
+        }
+        return ResponseEntity.status(401).body("Username ou palavra-passe incorretos.");
+    }
+
+    @PutMapping("/{id}/reset-senha")
+    public ResponseEntity<?> resetSenha(@PathVariable Long id) {
+        return repository.findById(id).map(user -> {
+            user.setPalavraPasse("123456");
+            repository.save(user);
+            return ResponseEntity.ok("Palavra-passe resetada para '123456'.");
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // 4. DELETE (Eliminar Utilizador) -> DELETE http://localhost:8080/api/utilizadores/{id}
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        if (utilizadorService.buscarPorId(id).isPresent()) {
-            utilizadorService.eliminar(id);
-            return ResponseEntity.noContent().build();
+    @PutMapping("/alterar-senha")
+    public ResponseEntity<?> alterarSenha(@RequestBody AlterarSenhaRequest request) {
+        Optional<Utilizador> userOpt = repository.findByUsername(request.getUsername());
+
+        if (userOpt.isPresent()) {
+            Utilizador user = userOpt.get();
+            if (user.getPalavraPasse().equals(request.getSenhaAntiga())) {
+                user.setPalavraPasse(request.getSenhaNova());
+                repository.save(user);
+                return ResponseEntity.ok("Palavra-passe alterada com sucesso.");
+            }
+            return ResponseEntity.badRequest().body("A palavra-passe antiga está incorreta.");
         }
         return ResponseEntity.notFound().build();
     }
