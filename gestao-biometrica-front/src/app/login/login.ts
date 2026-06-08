@@ -23,6 +23,7 @@ import { CommonModule } from '@angular/common';
               Nome de Utilizador (Username):
             </label>
             <input #userInput type="text" placeholder="Digite o seu username" 
+                   [disabled]="carregando()"
                    style="width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
           </div>
 
@@ -31,6 +32,7 @@ import { CommonModule } from '@angular/common';
               Palavra-passe:
             </label>
             <input #passwordInput type="password" placeholder="••••••••" 
+                   [disabled]="carregando()"
                    style="width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
           </div>
 
@@ -41,8 +43,15 @@ import { CommonModule } from '@angular/common';
           }
 
           <button (click)="autenticar(userInput.value, passwordInput.value)" 
-                  style="width: 100%; padding: 12px; background-color: #0d47a1; color: white; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; transition: background 0.2s;">
-            Entrar no Sistema
+                  [disabled]="carregando()"
+                  [style.opacity]="carregando() ? '0.7' : '1'"
+                  [style.cursor]="carregando() ? 'not-allowed' : 'pointer'"
+                  style="width: 100%; padding: 12px; background-color: #0d47a1; color: white; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; margin-top: 5px; transition: background 0.2s;">
+            @if (carregando()) {
+              A processar...
+            } @else {
+              Entrar no Sistema
+            }
           </button>
 
         </div>
@@ -57,10 +66,10 @@ import { CommonModule } from '@angular/common';
   styles: []
 })
 export class LoginComponent {
-  // Emite o objeto completo do utilizador (id, nome, cargo, estado) para o App Component
   loginSucesso = output<any>();
   
   protected mensagemErro = signal('');
+  protected carregando = signal(false);
 
   async autenticar(user: string, pass: string) {
     this.mensagemErro.set(''); 
@@ -69,6 +78,8 @@ export class LoginComponent {
       this.mensagemErro.set('Por favor, preencha todos os campos.');
       return;
     }
+
+    this.carregando.set(true);
 
     try {
       const resposta = await fetch('http://localhost:8080/api/utilizadores/login', {
@@ -81,11 +92,18 @@ export class LoginComponent {
         const dadosUtilizador = await resposta.json();
         this.loginSucesso.emit(dadosUtilizador); 
       } else {
-        const textoErro = await resposta.text();
-        this.mensagemErro.set(textoErro || 'Username ou palavra-passe incorretos.');
+        const textoRaw = await resposta.text();
+        try {
+          const jsonErro = JSON.parse(textoRaw);
+          this.mensagemErro.set(jsonErro.message || 'Username ou palavra-passe incorretos.');
+        } catch {
+          this.mensagemErro.set(textoRaw || 'Username ou palavra-passe incorretos.');
+        }
       }
     } catch (erro) {
       this.mensagemErro.set('Erro ao ligar ao servidor. Garanta que o Backend está ativo.');
+    } finally {
+      this.carregando.set(false);
     }
   }
 }

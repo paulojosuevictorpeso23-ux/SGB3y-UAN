@@ -42,8 +42,11 @@ public class BiometriaController {
     @PutMapping("/{id}")
     public ResponseEntity<Biometria> atualizar(@PathVariable Long id, @RequestBody Biometria dadosAtualizados) {
         return biometriaService.buscarPorId(id).map(biometria -> {
-            biometria.setSensorTemplateId(dadosAtualizados.getSensorTemplateId());
+            // RETIFICADO: Mapeamento dos novos atributos do modelo normalizado
+            biometria.setTemplateBiometrico(dadosAtualizados.getTemplateBiometrico());
+            biometria.setDedoRegistado(dadosAtualizados.getDedoRegistado());
             biometria.setUtilizador(dadosAtualizados.getUtilizador());
+            
             Biometria atualizada = biometriaService.salvar(biometria);
             return ResponseEntity.ok(atualizada);
         }).orElse(ResponseEntity.notFound().build());

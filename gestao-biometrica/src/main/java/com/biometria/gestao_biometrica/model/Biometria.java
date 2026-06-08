@@ -9,37 +9,34 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "biometrias")
-@Getter 
-@Setter 
-@NoArgsConstructor 
-@AllArgsConstructor 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Biometria {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // Relacionamento: Muitas biometrias pertencem a Um utilizador
+    @ManyToOne
     @JoinColumn(name = "utilizador_id", nullable = false)
     private Utilizador utilizador;
 
-    @Column(name = "sensor_template_id", nullable = false)
-    private Integer sensorTemplateId;
+    // Força o PostgreSQL a criar a coluna como TEXT (ideal para o vetor hexadecimal)
+    @Column(name = "template_biometrico", nullable = false, columnDefinition = "TEXT")
+    private String templateBiometrico;
 
-    @Column(name = "data_registo", updatable = false)
+    @Column(name = "dedo_registado", nullable = false, length = 30)
+    private String dedoRegistado; // Ex: "POLEGAR_DIREITO", "INDICADOR_ESQUERDO"
+
+    @Column(name = "data_registo", nullable = false, updatable = false)
     private LocalDateTime dataRegisto;
 
-    @Column(name = "data_atualizacao")
-    private LocalDateTime dataAtualizacao;
-
+    // Define automaticamente a data e hora do registo da digital
     @PrePersist
     protected void onCreate() {
         this.dataRegisto = LocalDateTime.now();
-        this.dataAtualizacao = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.dataAtualizacao = LocalDateTime.now();
     }
 }

@@ -1,7 +1,7 @@
 package com.biometria.gestao_biometrica.controller;
 
 import com.biometria.gestao_biometrica.model.Utilizador;
-import com.biometria.gestao_biometrica.repository.UtilizadorRepository;
+import com.biometria.gestao_biometrica.service.UtilizadorService;
 import com.biometria.gestao_biometrica.dto.LoginRequest;
 import com.biometria.gestao_biometrica.dto.AlterarSenhaRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,24 +17,49 @@ import java.util.Optional;
 public class UtilizadorController {
 
     @Autowired
-    private UtilizadorRepository repository;
+    private UtilizadorService utilizadorService;
 
     @GetMapping
     public List<Utilizador> listarTodos() {
-        return repository.findAll();
+        return utilizadorService.listarTodos();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Utilizador> buscarPorId(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(utilizadorService.buscarPorId(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping
     public Utilizador criar(@RequestBody Utilizador utilizador) {
-        if (utilizador.getPalavraPasse() == null || utilizador.getPalavraPasse().isBlank()) {
-            utilizador.setPalavraPasse("123456");
+        return utilizadorService.criar(utilizador);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Utilizador> atualizar(@PathVariable Long id, @RequestBody Utilizador utilizador) {
+        try {
+            return ResponseEntity.ok(utilizadorService.atualizar(id, utilizador));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
-        return repository.save(utilizador);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        try {
+            utilizadorService.eliminar(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        Optional<Utilizador> userOpt = repository.findByUsername(request.getUsername());
+        Optional<Utilizador> userOpt = utilizadorService.buscarPorUsername(request.getUsername());
 
         if (userOpt.isPresent() && userOpt.get().getPalavraPasse().equals(request.getPalavraPasse())) {
             Utilizador user = userOpt.get();
@@ -48,22 +73,25 @@ public class UtilizadorController {
 
     @PutMapping("/{id}/reset-senha")
     public ResponseEntity<?> resetSenha(@PathVariable Long id) {
-        return repository.findById(id).map(user -> {
+        try {
+            Utilizador user = utilizadorService.buscarPorId(id);
             user.setPalavraPasse("123456");
-            repository.save(user);
+            utilizadorService.salvar(user);
             return ResponseEntity.ok("Palavra-passe resetada para '123456'.");
-        }).orElse(ResponseEntity.notFound().build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PutMapping("/alterar-senha")
     public ResponseEntity<?> alterarSenha(@RequestBody AlterarSenhaRequest request) {
-        Optional<Utilizador> userOpt = repository.findByUsername(request.getUsername());
+        Optional<Utilizador> userOpt = utilizadorService.buscarPorUsername(request.getUsername());
 
         if (userOpt.isPresent()) {
             Utilizador user = userOpt.get();
             if (user.getPalavraPasse().equals(request.getSenhaAntiga())) {
                 user.setPalavraPasse(request.getSenhaNova());
-                repository.save(user);
+                utilizadorService.salvar(user);
                 return ResponseEntity.ok("Palavra-passe alterada com sucesso.");
             }
             return ResponseEntity.badRequest().body("A palavra-passe antiga está incorreta.");

@@ -1,8 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
-// Importamos todas as 6 telas do ecossistema (Agora com a Landing Page! 🌍)
-import { LandingPageComponent } from './landing-page/landing-page'; // <-- NOVO IMPORT
+// Importamos todas as 6 telas do ecossistema
+import { LandingPageComponent } from './landing-page/landing-page';
 import { LoginComponent } from './login/login';
 import { RegistarPontoComponent } from './registar-ponto/registar-ponto';
 import { RegistarUtilizadorComponent } from './registar-utilizador/registar-utilizador';
@@ -13,7 +13,7 @@ import { DashboardAdminComponent } from './dashboard-admin/dashboard-admin';
   selector: 'app-root',
   imports: [
     RouterOutlet, 
-    LandingPageComponent, // <-- ADICIONADO AQUI
+    LandingPageComponent, 
     LoginComponent, 
     RegistarPontoComponent, 
     RegistarUtilizadorComponent, 
@@ -33,13 +33,11 @@ import { DashboardAdminComponent } from './dashboard-admin/dashboard-admin';
             ⬅️ Voltar ao Início
           </button>
           
-          <app-login (loginSucesso)="usuarioLogado.set($event)"></app-login>
+          <app-login (loginSucesso)="aoLogarComSucesso($event)"></app-login>
         </div>
       }
 
-    } 
-    
-    @else if (usuarioLogado().cargo === 'ADMIN') {
+    } @else if (usuarioLogado().cargo?.nome === 'ADMIN') {
       <div style="font-family: sans-serif; background-color: #fafafa; min-height: 100vh; padding-bottom: 40px; margin: 0; animation: iniciarPainel 0.3s ease-out;">
         
         <div style="background-color: #0d47a1; color: white; padding: 20px; text-align: center; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -98,9 +96,7 @@ import { DashboardAdminComponent } from './dashboard-admin/dashboard-admin';
           }
         </div>
       </div>
-    }
-
-    @else if (usuarioLogado().cargo === 'ESTUDANTE') {
+    } @else if (usuarioLogado().cargo?.nome === 'ESTUDANTE') {
       <div style="font-family: sans-serif; background-color: #fafafa; min-height: 100vh; padding-bottom: 40px; margin: 0; animation: iniciarPainel 0.3s ease-out;">
         
         <div style="background-color: #1b5e20; color: white; padding: 20px; text-align: center; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -117,6 +113,18 @@ import { DashboardAdminComponent } from './dashboard-admin/dashboard-admin';
           <app-consultar-assiduidade [usuarioLogado]="usuarioLogado()"></app-consultar-assiduidade>
         </div>
       </div>
+    } @else {
+      <div style="font-family: sans-serif; padding: 40px; text-align: center; background: white; max-width: 500px; margin: 80px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 4px solid #c5221f;">
+        <h2 style="color: #c5221f; margin-top: 0;">⚠️ Perfil Não Mapeado</h2>
+        <p>O login foi efetuado com sucesso, mas o Angular não encontrou um painel para este cargo.</p>
+        <p style="background: #f1f5f9; padding: 12px; border-radius: 4px; font-family: monospace; font-weight: bold;">
+          Cargo recebido: "{{ usuarioLogado()?.cargo?.nome }}"
+        </p>
+        <p style="font-size: 13px; color: #666;">Abre a consola do teu navegador (F12) para ver a resposta completa da API.</p>
+        <button (click)="fazerLogout()" style="padding: 10px 20px; background-color: #0d47a1; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px;">
+          Voltar para o Login
+        </button>
+      </div>
     }
 
     <router-outlet />
@@ -130,9 +138,13 @@ export class App {
   protected readonly title = signal('gestao-biometrica-front');
   protected usuarioLogado = signal<any>(null);
   protected telaAtual = signal('dashboard');
-  
-  // Novo Signal para controlar a navegação pública antes do login! 🌍
   protected exibirLoginForm = signal<boolean>(false);
+
+  aoLogarComSucesso(usuario: any) {
+    console.log('=== DADOS RECEBIDOS DO BACKEND ===');
+    console.log(usuario);
+    this.usuarioLogado.set(usuario);
+  }
 
   mudarTela(nomeDaTela: string) {
     this.telaAtual.set(nomeDaTela);
@@ -140,6 +152,6 @@ export class App {
 
   fazerLogout() {
     this.usuarioLogado.set(null);
-    this.exibirLoginForm.set(false); // Quando sai, volta para a Landing Page
+    this.exibirLoginForm.set(false);
   }
 }

@@ -1,175 +1,42 @@
-import { Component, inject, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+package com.biometria.gestao_biometrica.controller;
 
-@Component({
-  selector: 'app-consultar-assiduidade',
-  imports: [CommonModule],
-  template: `
-    <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 25px; font-size: 13px; border: 1px solid #ffeeba; font-family: sans-serif;">
-      <h4 style="margin: 0 0 8px 0; color: #533f03;">🛠️ Diagnóstico de Comunicação Frontend ➔ Backend</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div>👤 Utilizador Ativo: <b>{{ usuarioLogado?.nome || 'Nenhum' }}</b> (Cargo: <b>{{ usuarioLogado?.cargo || 'Nenhum' }}</b>)</div>
-        <div>🌐 Recebidos do Spring Boot: <b style="color: #2e7d32; font-size: 14px;">{{ todosOsPontos.length }} registos</b></div>
-        <div>📊 Exibidos na Tabela: <b>{{ pontosFiltrados.length }} registos</b></div>
-      </div>
-    </div>
+import com.biometria.gestao_biometrica.model.RegistoAssiduidade;
+import com.biometria.gestao_biometrica.service.AssiduidadeService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-    <div style="background: white; border: 1px solid #eee; border-radius: 8px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); font-family: sans-serif;">
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
-        <div>
-          <h3 style="margin: 0; color: #333;">
-            {{ usuarioLogado?.cargo === 'ADMIN' ? '📋 Relatório Geral de Assiduidade (UAN)' : '📖 O Meu Histórico de Presenças' }}
-          </h3>
-          <p style="margin: 5px 0 0 0; color: #777; font-size: 13px;">
-            {{ usuarioLogado?.cargo === 'ADMIN' ? 'Consulta e filtragem de acessos biométricos de todos os utilizadores.' : 'Lista de todas as tuas entradas e saídas registadas no sistema.' }}
-          </p>
-        </div>
+import java.util.List;
 
-        @if (usuarioLogado?.cargo === 'ADMIN') {
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <input (input)="filtrarPorTexto($any($event.target).value)"
-                   type="text" placeholder="🔍 Pesquise por nome ou 'entrada'/'saida'..." 
-                   style="padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; width: 300px; font-size: 13px; outline: none;">
-            
-            <button (click)="carregarTodosOsPontos()" 
-                    style="padding: 10px 14px; background-color: #757575; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold;">
-              🔄 Atualizar
-            </button>
-          </div>
-        } @else {
-          <button (click)="carregarTodosOsPontos()" 
-                  style="padding: 10px 14px; background-color: #2e7d32; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold;">
-            🔄 Atualizar as minhas presenças
-          </button>
+@RestController
+@RequestMapping("/api/assiduidade")
+@CrossOrigin(origins = "*")
+public class AssiduidadeController {
+
+    @Autowired
+    private AssiduidadeService assiduidadeService;
+
+    // Rota para registar uma picagem de ponto
+    // Exemplo de uso: POST http://localhost:8080/api/assiduidade/bater?utilizadorId=1&tipo=ENTRADA
+    @PostMapping("/bater")
+    public ResponseEntity<RegistoAssiduidade> baterPonto(@RequestParam Long utilizadorId, @RequestParam String tipo) {
+        try {
+            RegistoAssiduidade novoRegisto = assiduidadeService.registarPonto(utilizadorId, tipo);
+            return ResponseEntity.ok(novoRegisto);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
         }
-      </div>
-
-      <div style="width: 100%; overflow-x: auto; border: 1px solid #eee; border-radius: 6px;">
-        <table style="width: 100%; min-width: 850px; border-collapse: collapse; text-align: left; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #f8f9fa; border-bottom: 2px solid #eee;">
-              <th style="padding: 14px; width: 80px;">Nº Registo</th>
-              @if (usuarioLogado?.cargo === 'ADMIN') {
-                <th style="padding: 14px; width: 80px;">ID User</th>
-                <th style="padding: 14px;">Nome do Utilizador</th>
-                <th style="padding: 14px; width: 120px;">Cargo</th>
-              }
-              <th style="padding: 14px; width: 140px;">Tipo de Movimento</th>
-              <th style="padding: 14px; width: 220px;">Data & Hora do Acesso</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (ponto of pontosFiltrados; track ponto.id) {
-              <tr style="border-bottom: 1px solid #f5f5f5;">
-                <td style="padding: 14px; font-weight: bold; color: #666;">#{{ ponto.id }}</td>
-                
-                @if (usuarioLogado?.cargo === 'ADMIN') {
-                  <td style="padding: 14px; color: #999; font-family: monospace;">{{ ponto.utilizador?.id || ponto.utilizadorId }}</td>
-                  <td style="padding: 14px; font-weight: 500; color: #111;">{{ ponto.utilizador?.nome || 'Utilizador Desconhecido' }}</td>
-                  <td style="padding: 14px;">
-                    <span style="background-color: #e8f0fe; color: #1a73e8; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">
-                      {{ ponto.utilizador?.cargo || 'N/A' }}
-                    </span>
-                  </td>
-                }
-
-                <td style="padding: 14px;">
-                  @if ((ponto.tipo || ponto.type || '') === 'ENTRADA') {
-                    <span style="background-color: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">
-                      🟢 ENTRADA
-                    </span>
-                  } @else {
-                    <span style="background-color: #fce8e6; color: #c5221f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">
-                      🔴 SAÍDA
-                    </span>
-                  }
-                </td>
-                <td style="padding: 14px; font-weight: bold; color: #444; font-family: monospace;">
-                  {{ (ponto.dataHora || ponto.dataHoraRegisto) | date: 'dd/MM/yyyy - HH:mm:ss' }}
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td [attr.colspan]="usuarioLogado?.cargo === 'ADMIN' ? 5 : 3" style="padding: 35px; text-align: center; color: #888; font-style: italic;">
-                  Nenhum registo de assiduidade encontrado para esta consulta.
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-  `,
-  styles: []
-})
-export class ConsultarAssiduidadeComponent implements OnInit, OnChanges {
-  private http = inject(HttpClient);
-  
-  // CORRIGIDO AQUI: Apontando exatamente para a rota mapeada no teu Java Controller!
-  private urlPontos = 'http://localhost:8080/api/assiduidade';
-
-  @Input() usuarioLogado: any = null;
-
-  todosOsPontos: any[] = [];
-  pontosFiltrados: any[] = [];
-  textoDaBusca: string = '';
-
-  ngOnInit() {
-    this.carregarTodosOsPontos();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['usuarioLogado']) {
-      this.aplicarFiltro();
-    }
-  }
-
-  carregarTodosOsPontos() {
-    this.http.get<any[]>(this.urlPontos).subscribe({
-      next: (dados) => {
-        console.log('Dados recebidos com sucesso da rota assiduidade:', dados);
-        this.todosOsPontos = dados || [];
-        this.aplicarFiltro();
-      },
-      error: (erro) => {
-        console.error('Erro crítico ao conectar à rota /api/assiduidade:', erro);
-      }
-    });
-  }
-
-  filtrarPorTexto(valor: string) {
-    this.textoDaBusca = valor;
-    this.aplicarFiltro();
-  }
-
-  aplicarFiltro() {
-    const user = this.usuarioLogado;
-    if (!user) {
-      this.pontosFiltrados = [];
-      return;
     }
 
-    if (user.cargo === 'ESTUDANTE') {
-      this.pontosFiltrados = this.todosOsPontos.filter(ponto => {
-        const idDoUserNoPonto = ponto.utilizador?.id || ponto.utilizadorId || ponto.idUtilizador;
-        return String(idDoUserNoPonto) === String(user.id);
-      });
-      return;
+    // Rota para o Admin listar absolutamente todos os pontos registados no sistema
+    @GetMapping
+    public List<RegistoAssiduidade> listarTodos() {
+        return assiduidadeService.listarTodos();
     }
 
-    const busca = this.textoDaBusca.toLowerCase().trim();
-    if (!busca) {
-      this.pontosFiltrados = this.todosOsPontos;
-      return;
+    // Rota para listar o histórico de assiduidade de um funcionário específico
+    @GetMapping("/utilizador/{utilizadorId}")
+    public List<RegistoAssiduidade> listarPorUtilizador(@PathVariable Long utilizadorId) {
+        return assiduidadeService.listarPorUtilizador(utilizadorId);
     }
-
-    this.pontosFiltrados = this.todosOsPontos.filter(ponto => {
-      const nome = (ponto.utilizador?.nome || '').toLowerCase();
-      const tipo = (ponto.tipo || ponto.type || '').toLowerCase();
-      return nome.includes(busca) || tipo.includes(busca);
-    });
-  }
 }
