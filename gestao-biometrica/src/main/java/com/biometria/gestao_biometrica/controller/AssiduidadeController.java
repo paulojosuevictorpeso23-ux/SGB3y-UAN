@@ -66,13 +66,23 @@ public class AssiduidadeController {
     }
 
     // 1. Rota clássica (Dispositivo físico por parâmetro)
+   // 1. Rota clássica (Dispositivo físico por JSON)
     @PostMapping("/bater")
-    public ResponseEntity<RegistoAssiduidade> baterPonto(@RequestParam Long utilizadorId, @RequestParam String tipo) {
+    public ResponseEntity<?> baterPonto(@RequestBody Map<String, Object> body) {
         try {
+            // Extrair os dados do JSON de forma segura
+            Long utilizadorId = Long.valueOf(body.get("utilizadorId").toString());
+            String tipo = body.get("tipo").toString();
+
+            // Chamada ao teu service (que faz o trabalho real no banco)
             RegistoAssiduidade novoRegisto = assiduidadeService.registarPonto(utilizadorId, tipo);
+            
+            // Retorno de sucesso com o objeto criado
             return ResponseEntity.ok(novoRegisto);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(null);
+            
+        } catch (Exception e) {
+            // Retorno de erro caso algo falhe
+            return ResponseEntity.badRequest().body("Erro ao registar ponto: " + e.getMessage());
         }
     }
 

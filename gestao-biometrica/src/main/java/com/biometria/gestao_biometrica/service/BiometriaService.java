@@ -1,12 +1,12 @@
 package com.biometria.gestao_biometrica.service;
 
+import com.machinezoo.sourceafis.*;
 import com.biometria.gestao_biometrica.model.Biometria;
 import com.biometria.gestao_biometrica.repository.BiometriaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class BiometriaService {
@@ -14,23 +14,33 @@ public class BiometriaService {
     @Autowired
     private BiometriaRepository biometriaRepository;
 
-    public Biometria salvar(Biometria biometria) {
-        return biometriaRepository.save(biometria);
+    public BiometriaService() {} 
+    
+    // Construtor essencial para o teste unitário funcionar
+    public BiometriaService(BiometriaRepository repo) { 
+        this.biometriaRepository = repo; 
     }
+    
+   public String identificarUtilizador(String templateBase64) {
+    try {
+        byte[] templateBytes = Base64.getDecoder().decode(templateBase64);
+        FingerprintTemplate probe = new FingerprintTemplate(templateBytes);
 
-    public List<Biometria> listarTodas() {
-        return biometriaRepository.findAll();
-    }
-
-    public Optional<Biometria> buscarPorId(Long id) {
-        return biometriaRepository.findById(id);
-    }
-
-    public List<Biometria> buscarPorUtilizador(Long utilizadorId) {
-        return biometriaRepository.findByUtilizadorId(utilizadorId);
-    }
-
-    public void eliminar(Long id) {
-        biometriaRepository.deleteById(id);
+        List<Biometria> baseDeDados = biometriaRepository.findAll();
+        for (Biometria b : baseDeDados) {
+            byte[] candidateBytes = Base64.getDecoder().decode(b.getTemplateBiometrico());
+            FingerprintTemplate candidate = new FingerprintTemplate(candidateBytes);
+            
+            double score = new FingerprintMatcher(probe).match(candidate);
+            if (score >= 40) {
+                return b.getUtilizador().getNome();
+            }
+        }
+        return "Nenhum utilizador encontrado";
+    } catch (Exception e) {
+        return "Erro: Template biométrico inválido.";
     }
 }
+}
+
+
