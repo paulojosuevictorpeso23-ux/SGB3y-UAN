@@ -9,6 +9,7 @@ import com.biometria.gestao_biometrica.repository.HorarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,11 +30,11 @@ public class UtilizadorController {
     @Autowired
     private HorarioRepository horarioRepository;
 
-    // 1. LISTAR TODOS OS UTILIZADORES
-    @GetMapping
-    public List<Utilizador> listarTodos() {
-        return utilizadorRepository.findAll();
-    }
+    // 1. LISTAR 
+@GetMapping
+public List<Utilizador> listarTodos() {
+    return utilizadorRepository.findAll(); // Busca tudo, sem filtros
+}
 
     // 2. BUSCAR UTILIZADOR POR ID
     @GetMapping("/{id}")
@@ -49,40 +50,41 @@ public class UtilizadorController {
     @PostMapping
     public ResponseEntity<?> cadastrarUtilizador(@RequestBody Map<String, Object> dados) {
         try {
-            String username = (String) dados.get("username");
-            String email = (String) dados.get("email");
+            // -- AQUI É ONDE COMEÇA A ALTERAÇÃO --
+            String username = (dados.get("username") != null) ? dados.get("username").toString() : "";
+            String email = (dados.get("email") != null) ? dados.get("email").toString() : "";
 
             if (utilizadorRepository.findByUsername(username).isPresent()) {
                 return ResponseEntity.badRequest().body("Erro: O nome de utilizador '" + username + "' já está em uso.");
             }
 
-            if (email != null && !email.trim().isEmpty()) {
-                Optional<Utilizador> uOpt = utilizadorRepository.findAll().stream()
-                        .filter(u -> email.equalsIgnoreCase(u.getEmail()))
-                        .findFirst();
-                if (uOpt.isPresent()) {
-                    return ResponseEntity.badRequest().body("Erro: O e-mail '" + email + "' já está registado.");
-                }
-            }
-
             Utilizador novo = new Utilizador();
-            novo.setNome((String) dados.get("nome"));
+            novo.setNome(dados.get("nome") != null ? dados.get("nome").toString() : "");
             novo.setUsername(username);
-            novo.setPalavraPasse((String) dados.get("palavraPasse"));
+            novo.setPalavraPasse(dados.get("palavraPasse") != null ? dados.get("palavraPasse").toString() : "");
             novo.setEmail(email);
-            novo.setContacto((String) dados.get("contacto"));
+            novo.setContacto(dados.get("contacto") != null ? dados.get("contacto").toString() : "");
             novo.setEstado("ATIVO");
             novo.setDataCriacao(LocalDateTime.now());
             novo.setDataAtualizacao(LocalDateTime.now());
 
-            Long cargoId = Long.valueOf(dados.get("cargoId").toString());
+            // Conversão segura dos IDs
+            Object cId = dados.get("cargoId");
+            Object hId = dados.get("horarioId");
+
+            if (cId == null || hId == null) {
+                return ResponseEntity.badRequest().body("Erro: Cargo ou Horário não selecionados.");
+            }
+
+            Long cargoId = Long.valueOf(String.valueOf(cId));
+            Long horarioId = Long.valueOf(String.valueOf(hId));
+
             Optional<Cargo> cargoOpt = cargoRepository.findById(cargoId);
             if (cargoOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body("Erro: Cargo com ID " + cargoId + " não existe.");
             }
             novo.setCargo(cargoOpt.get());
 
-            Long horarioId = Long.valueOf(dados.get("horarioId").toString());
             Optional<Horario> horarioOpt = horarioRepository.findById(horarioId);
             if (horarioOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body("Erro: Horário com ID " + horarioId + " não existe.");
@@ -91,6 +93,7 @@ public class UtilizadorController {
 
             Utilizador salvo = utilizadorRepository.save(novo);
             return ResponseEntity.ok(salvo);
+            // -- AQUI TERMINA A ALTERAÇÃO --
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Erro ao processar cadastro: " + e.getMessage());
@@ -154,20 +157,22 @@ public class UtilizadorController {
         }
     }
 
-    // 5. DESATIVAR UTILIZADOR (SOFT DELETE VIA ENUM/STRING ESTADO)
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> desativarUtilizador(@PathVariable Long id) {
-        Optional<Utilizador> uOpt = utilizadorRepository.findById(id);
-        if (uOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Erro: Utilizador com ID " + id + " não encontrado.");
-        }
-
-        Utilizador utilizador = uOpt.get();
-        utilizador.setEstado("INATIVO"); // <--- Soft delete seguro para manter histórico de pontos
-        utilizador.setDataAtualizacao(LocalDateTime.now());
-        
-        utilizadorRepository.save(utilizador);
-        return ResponseEntity.ok("Utilizador '" + utilizador.getNome() + "' foi desativado com sucesso.");
+    // 5. DESATIVAR UTILIZADOR
+@DeleteMapping("/{id}")
+@Transactional // <--- ISSO É O QUE FALTA PARA GRAVAR
+public ResponseEntity<Void> desativarUtilizador(@PathVariable Long id) {
+    Optional<Utilizador> uOpt = utilizadorRepository.findById(id);
+    if (uOpt.isEmpty()) {
+        return ResponseEntity.notFound().build();
     }
+
+    Utilizador utilizador = uOpt.get();
+    utilizador.setEstado("INATIVO"); // Certifique-se de que o campo na BD é exatamente "INATIVO"
+    utilizador.setDataAtualizacao(LocalDateTime.now());
+    
+    utilizadorRepository.save(utilizador); // Agora será gravado com sucesso
+    
+    return ResponseEntity.noContent().build();
+}
 }
 

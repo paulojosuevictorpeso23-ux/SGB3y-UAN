@@ -66,4 +66,23 @@ public class AssiduidadeService {
                 .orElseThrow(() -> new RuntimeException("Utilizador não encontrado!"));
         return assiduidadeRepository.findByUtilizadorOrderByDataHoraDesc(utilizador);
     }
+    
+    
+	public String determinarProximoTipo(Long utilizadorId) {
+    Utilizador u = utilizadorRepository.findById(utilizadorId)
+            .orElseThrow(() -> new RuntimeException("Utilizador não encontrado"));
+    
+    // Busca o histórico do utilizador ordenado do mais recente para o mais antigo
+    List<RegistoAssiduidade> historico = assiduidadeRepository.findByUtilizadorOrderByDataHoraDesc(u);
+    
+    if (historico.isEmpty()) {
+        return "ENTRADA";
+    }
+    
+    RegistoAssiduidade ultimo = historico.get(0);
+    
+    // Se o último registo foi ENTRADA, agora é SAÍDA. Caso contrário, é ENTRADA.
+    return "ENTRADA".equalsIgnoreCase(ultimo.getTipo()) ? "SAIDA" : "ENTRADA";
 }
+}
+

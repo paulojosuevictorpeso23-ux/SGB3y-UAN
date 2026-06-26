@@ -16,6 +16,10 @@ import java.util.Optional;
 @RequestMapping("/api/biometria")
 @CrossOrigin(origins = "*")
 public class BiometriaController {
+	
+	
+	@Autowired
+	private com.biometria.gestao_biometrica.service.AssiduidadeService assiduidadeService;
 
     @Autowired
     private BiometriaRepository biometriaRepository;
@@ -65,17 +69,29 @@ public class BiometriaController {
     // ==========================================
     // IDENTIFICAR UTILIZADOR (Motor de Match)
     // ==========================================
-    @PostMapping("/identificar")
-    public ResponseEntity<?> identificar(@RequestBody Map<String, String> dados) {
-        String template = dados.get("templateBiometrico");
-        
-        if (template == null || template.isEmpty()) {
-            return ResponseEntity.badRequest().body("Erro: Template em falta.");
-        }
-        
-        // Chama o serviço que validámos com os testes unitários
-        String nomeUtilizador = biometriaService.identificarUtilizador(template);
-        
-        return ResponseEntity.ok(Map.of("utilizador", nomeUtilizador));
+// Dentro de BiometriaController.java
+
+	@PostMapping("/identificar")
+	public ResponseEntity<?> identificar(@RequestBody Map<String, String> dados) {
+    String template = dados.get("templateBiometrico");
+    
+    Utilizador u = biometriaService.identificarUtilizador(template);
+    
+    if (u == null) {
+        return ResponseEntity.status(404).body("Utilizador não identificado.");
     }
+
+    // O sistema decide automaticamente se é entrada ou saída
+    String tipo = assiduidadeService.determinarProximoTipo(u.getId());
+    
+    // Regista o ponto com o tipo determinado
+    assiduidadeService.registarPonto(u.getId(), tipo);
+    
+    return ResponseEntity.ok(Map.of(
+        "utilizador", u.getNome(), 
+        "tipoRegistado", tipo,
+        "mensagem", "Ponto de " + tipo + " registado com sucesso!"
+    ));
 }
+}
+

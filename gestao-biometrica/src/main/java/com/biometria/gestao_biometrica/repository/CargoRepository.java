@@ -10,3 +10,4 @@ public interface CargoRepository extends JpaRepository<Cargo, Long> {
     // Para podermos procurar um cargo pelo nome (ex: "ADMIN") mais tarde
     Optional<Cargo> findByNome(String nome);
 }
+

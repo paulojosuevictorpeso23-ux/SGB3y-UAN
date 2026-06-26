@@ -2,6 +2,7 @@ package com.biometria.gestao_biometrica.service;
 
 import com.machinezoo.sourceafis.*;
 import com.biometria.gestao_biometrica.model.Biometria;
+import com.biometria.gestao_biometrica.model.Utilizador;
 import com.biometria.gestao_biometrica.repository.BiometriaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,8 @@ public class BiometriaService {
     public BiometriaService(BiometriaRepository repo) { 
         this.biometriaRepository = repo; 
     }
-    
-   public String identificarUtilizador(String templateBase64) {
+    /*
+   public Utilizador identificarUtilizador(String templateBase64) {
     try {
         byte[] templateBytes = Base64.getDecoder().decode(templateBase64);
         FingerprintTemplate probe = new FingerprintTemplate(templateBytes);
@@ -33,13 +34,28 @@ public class BiometriaService {
             
             double score = new FingerprintMatcher(probe).match(candidate);
             if (score >= 40) {
-                return b.getUtilizador().getNome();
+                return b.getUtilizador(); // Retorna o objeto completo
             }
         }
-        return "Nenhum utilizador encontrado";
+        return null; // Nenhum match
     } catch (Exception e) {
-        return "Erro: Template biométrico inválido.";
+        return null; 
     }
+}
+*/
+
+public Utilizador identificarUtilizador(String templateBase64) {
+    // REMOVE ou COMENTA a decodificação Base64 e o FingerprintTemplate por enquanto
+    // Apenas para teste, vamos comparar a string diretamente:
+    
+    List<Biometria> baseDeDados = biometriaRepository.findAll();
+    for (Biometria b : baseDeDados) {
+        // Se a string recebida for igual à que está na base de dados
+        if (b.getTemplateBiometrico().equals(templateBase64)) {
+            return b.getUtilizador();
+        }
+    }
+    return null;
 }
 }
 

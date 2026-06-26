@@ -21,3 +21,4 @@ public class Cargo {
     @Column(nullable = false, unique = true, length = 50)
     private String nome;
 }
+

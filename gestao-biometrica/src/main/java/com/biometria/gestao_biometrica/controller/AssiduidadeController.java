@@ -273,5 +273,28 @@ public class AssiduidadeController {
             return ResponseEntity.badRequest().body("Erro ao processar resumo individual: " + e.getMessage());
         }
     }
+    
+    
+    // ==========================================
+    // 9. NOVA ROTA: BATER PONTO MANUAL (ADMIN)
+    // ==========================================
+    @PostMapping("/manual/{utilizadorId}")
+    public ResponseEntity<?> baterPontoManualAdmin(@PathVariable Long utilizadorId, @RequestBody Map<String, String> body) {
+        try {
+            // O tipo (ex: "ENTRADA" ou "SAIDA") vem do corpo da requisição ou podes fixar como "MANUAL_ADMIN"
+            String tipo = body.getOrDefault("tipo", "ENTRADA");
+            
+            // Reutiliza o método que já tens no teu service
+            RegistoAssiduidade novoRegisto = assiduidadeService.registarPonto(utilizadorId, tipo);
+            
+            // Opcional: Atualizar o estado se necessário
+            novoRegisto.setEstadoPonto("MANUAL_ADMIN"); 
+            registoAssiduidadeRepository.save(novoRegisto);
+
+            return ResponseEntity.ok(novoRegisto);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao registar ponto manual: " + e.getMessage());
+        }
+    }
 }
 
