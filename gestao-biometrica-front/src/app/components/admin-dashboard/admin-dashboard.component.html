@@ -1,0 +1,53 @@
+<div class="admin-container">
+  <h2>Gestão de Utilizadores</h2>
+
+  <form (submit)="salvar()" class="form-grid">
+    <input [(ngModel)]="utilizador.nome" name="nome" placeholder="Nome Completo" required>
+    <input [(ngModel)]="utilizador.username" name="username" placeholder="Username" required>
+    <input [(ngModel)]="utilizador.contacto" name="contacto" placeholder="Contacto">
+    <input [(ngModel)]="utilizador.email" name="email" type="email" placeholder="Email" required>
+    
+    <select [(ngModel)]="utilizador.cargoId" name="cargo" required>
+      <option value="1">Administrador</option>
+      <option value="2">Funcionário</option>
+    </select>
+    
+    <select [(ngModel)]="utilizador.estado" name="estado">
+      <option value="ATIVO">ATIVO</option>
+      <option value="INATIVO">INATIVO</option>
+    </select>
+
+    <button type="submit" class="btn-save">{{ utilizador.id ? 'Atualizar' : 'Cadastrar' }}</button>
+  </form>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Username</th>
+          <th>Contacto</th>
+          <th>Cargo</th>
+          <th>Estado</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of listaUtilizadores" [class.inativo]="u.estado === 'INATIVO'">
+          <td>{{ u.nome }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.contacto }}</td>
+          <td>{{ u.cargo?.nome }}</td>
+          <td [style.color]="u.estado === 'INATIVO' ? 'red' : 'green'">{{ u.estado }}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-edit" (click)="editar(u)">Editar</button>
+              <button class="btn-bio" (click)="iniciarAssociacao(u.id)">Biometria</button>
+              <button class="btn-delete" (click)="apagar(u.id)">Apagar</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,20 @@
+<div class="totem-container">
+  <div class="status-box">
+    <h1>SGB - Terminal de Assiduidade</h1>
+
+    <div class="sensor-area">
+      <input type="text" [(ngModel)]="vectorHexa" placeholder="Aguardando digital..." class="input-leitura">
+      <button (click)="verificarPonto()">Validar Digital</button>
+    </div>
+
+    <div class="mensagem-status">
+      <p><strong>{{ mensagem }}</strong></p>
+    </div>
+
+    <div *ngIf="resultado" class="resultado-box">
+      <p>Bem-vindo/Até Manhã: <strong>{{ resultado.utilizador }}</strong></p>
+      <p>Status: <strong>{{ resultado.tipoRegistado }}</strong></p>
+      <p><small>{{ resultado.mensagem }}</small></p>
+    </div>
+  </div>
+</div>
